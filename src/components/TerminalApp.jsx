@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send } from "lucide-react";
+import { Send, TerminalSquare } from "lucide-react";
 import DecryptedText from "./ui/DecryptedText";
 
 export default function TerminalApp({
@@ -10,50 +10,45 @@ export default function TerminalApp({
   playSound,
 }) {
   const [input, setInput] = useState("");
-  // Logs are now objects: { id, type, content }
   const [logs, setLogs] = useState([
-    { id: 1, type: "text", content: "> CONNECTED TO SECURE SHELL" },
+    { id: 1, type: "system", content: "Ph0enixOS Shell v4.0.2" },
   ]);
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
 
+  // Auto-scroll to bottom on new logs
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Puzzle Logic for Level 3
+  // Keep focus on input when clicking terminal background
   useEffect(() => {
-    if (level && level.type === "console") {
-      window.isAdmin = () => false;
-      window.checkAccess = () => {
-        if (window.isAdmin()) {
-          alert(`ACCESS GRANTED. FLAG: ROOT_ACCESS_GRANTED`);
-        } else {
-          console.error("Access Denied.");
-          alert("Access Denied. Check Console.");
-        }
-      };
-    }
-  }, [level]);
+    inputRef.current?.focus();
+  }, []);
 
   const addLog = (content, type = "text") => {
     setLogs((prev) => [...prev, { id: Date.now(), type, content }]);
   };
 
-  const handleCommand = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
     const cmd = input.trim();
 
-    // Log user input
-    addLog(`> ${cmd}`, "command");
+    // Log User Command
+    addLog(cmd, "command");
 
+    // Process Local Commands
     if (cmd === "clear") {
       setLogs([]);
       setInput("");
       return;
     }
     if (cmd === "help") {
-      addLog("Cmds: submit <flag>, skip, clear", "info");
+      addLog("AVAILABLE COMMANDS:", "info");
+      addLog("  submit <flag>  : Verify a puzzle solution", "text");
+      addLog("  skip           : Skip current level (-250 credits)", "text");
+      addLog("  clear          : Clear terminal output", "text");
       setInput("");
       return;
     }
@@ -64,10 +59,10 @@ export default function TerminalApp({
       return;
     }
 
+    // Process Game Logic
     const cleanCmd = cmd.startsWith("submit ")
       ? cmd.replace("submit ", "")
       : cmd;
-
     const res = await onSubmit(cleanCmd);
 
     if (res.success) {
@@ -83,102 +78,118 @@ export default function TerminalApp({
 
   if (!level)
     return (
-      <div className="p-10 text-green-500 text-center h-full flex items-center justify-center font-bold animate-pulse">
-        ALL LEVELS COMPLETE.
-        <br />
-        MISSION ACCOMPLISHED.
+      <div className="p-10 text-green-500 animate-pulse text-center">
+        SYSTEM HALTED. ALL OBJECTIVES COMPLETE.
       </div>
     );
 
   return (
-    <div className="flex flex-col h-full bg-black text-green-500 font-mono text-sm pt-8">
-      <div className="bg-green-900/10 p-3 text-xs flex justify-between border-b border-green-900/50">
-        <span className="text-green-300">USER: ADMIN</span>
-        <span className="text-green-300">CREDITS: ${credits}</span>
-      </div>
-      <div className="p-4 border-b border-green-900/30 bg-green-900/5 text-gray-400 text-xs">
-        <div className="flex justify-between mb-2">
-          <span className="text-green-500 font-bold uppercase">
-            Target: {level.title}
-          </span>
-          <span className="text-green-800">ID: #{level.id}</span>
+    <div
+      className="flex flex-col h-full bg-[#050505] font-mono text-sm relative"
+      onClick={() => inputRef.current?.focus()} // Click anywhere to focus
+    >
+      {/* HEADER INFO */}
+      <div className="bg-[#111] p-3 border-b border-[#222] flex justify-between items-center text-xs select-none">
+        <div className="flex items-center gap-2 text-gray-400">
+          <TerminalSquare size={14} className="text-green-500" />
+          <span>/bin/bash</span>
         </div>
-        <p className="mb-3 leading-relaxed">{level.prompt}</p>
+        <div className="flex gap-4">
+          <span className="text-green-400 font-bold">CREDITS: ${credits}</span>
+          <span className="text-gray-500">USER: ADMIN</span>
+        </div>
+      </div>
 
-        {/* Puzzle Visuals */}
+      {/* PUZZLE PROMPT AREA */}
+      <div className="bg-[#0a0a0a] border-b border-[#222] p-4 text-gray-300 text-xs">
+        <div className="flex justify-between mb-2">
+          <span className="text-green-500 font-bold uppercase tracking-wider">
+            TARGET :: {level.title}
+          </span>
+          <span className="text-gray-600">ID: #{level.id}</span>
+        </div>
+        <p className="leading-relaxed opacity-90">{level.prompt}</p>
+
+        {/* Level Specific Visuals */}
         {level.type === "visual" && (
-          <div className="bg-white p-3 text-center select-text mt-2 text-black font-bold rounded cursor-text">
-            {/* White text on white background */}
-            <span className="text-white select-all">CYPHX2x1</span>
+          <div className="mt-3 p-3 bg-white text-white select-text cursor-text rounded font-bold text-center">
+            PHX101
           </div>
         )}
         {level.type === "html_comment" && (
           <div
             data-secret="DEV_BACKDOOR_X7"
-            className="text-gray-700 text-center border border-gray-800 p-2 mt-2 select-none font-bold cursor-help"
-            title="Right Click > Inspect"
+            className="mt-3 p-2 border border-dashed border-gray-700 text-gray-600 text-center text-xs hover:border-green-500/30 transition-colors cursor-help"
+            title="Inspect Element?"
           >
-            Inspect Element.
+            [ DOM NODE :: HIDDEN ATTRIBUTES ]
           </div>
         )}
         {level.type === "console" && (
           <button
             onClick={() => window.checkAccess && window.checkAccess()}
-            className="w-full border border-red-500 text-red-500 p-2 mt-2 hover:bg-red-900/20 rounded uppercase font-bold tracking-widest transition-colors"
+            className="mt-3 w-full border border-red-900/50 bg-red-900/10 text-red-500 py-2 text-xs font-bold hover:bg-red-900/20 transition-all"
           >
-            Execute Login()
+            ⚠ EXECUTE_LOGIN_ROUTINE()
           </button>
         )}
         {level.type === "encoding" && (
-          <div className="bg-neutral-900 p-3 break-all text-purple-400 border border-purple-900 mt-2 font-mono rounded">
+          <div className="mt-3 p-3 bg-[#111] border border-[#333] text-purple-400 font-mono break-all rounded">
             {level.content}
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-20">
+      {/* LOG OUTPUT AREA (Scrollable) */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-1.5 pb-20 custom-scrollbar">
         {logs.map((l) => (
-          <div
-            key={l.id}
-            className={
-              l.type === "error"
-                ? "text-red-500"
-                : l.type === "info"
-                  ? "text-blue-400"
-                  : "text-green-500"
-            }
-          >
-            {l.type === "success_component" ? (
+          <div key={l.id} className="break-words">
+            {l.type === "command" && (
+              <span className="text-gray-500 mr-2">$ {l.content}</span>
+            )}
+            {l.type === "system" && (
+              <span className="text-blue-400">{l.content}</span>
+            )}
+            {l.type === "text" && (
+              <span className="text-gray-300">{l.content}</span>
+            )}
+            {l.type === "error" && (
+              <span className="text-red-500">{l.content}</span>
+            )}
+            {l.type === "info" && (
+              <span className="text-yellow-500">{l.content}</span>
+            )}
+            {l.type === "success_component" && (
               <DecryptedText
                 text={`[SUCCESS] ${l.content}`}
-                className="font-bold text-green-400"
+                className="text-green-400 font-bold"
               />
-            ) : (
-              l.content
             )}
           </div>
         ))}
-        <div ref={scrollRef}></div>
+        <div ref={scrollRef} />
       </div>
 
-      {/* INPUT BAR */}
+      {/* FIXED INPUT BAR */}
       <form
-        onSubmit={handleCommand}
-        className="absolute bottom-0 left-0 right-0 p-2 border-t border-green-900/50 bg-neutral-900 flex gap-2 items-center"
+        onSubmit={handleSubmit}
+        className="absolute bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#222] p-2 flex items-center gap-2"
       >
-        <span className="mt-0 text-green-500">$</span>
+        <span className="text-green-500 font-bold pl-2 animate-pulse">❯</span>
         <input
-          autoFocus
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-transparentVx outline-none text-green-400 placeholder-green-900/50 h-10 border-none focus:ring-0"
+          className="flex-1 bg-transparent border-none outline-none text-green-400 font-mono placeholder-green-900/50 h-10"
           placeholder="Enter command..."
+          autoComplete="off"
+          autoFocus
         />
         <button
           type="submit"
-          className="p-2 bg-green-900/20 text-green-500 rounded hover:bg-green-500 hover:text-black transition-colors"
+          className="p-2 text-green-600 hover:text-green-400 transition-colors"
         >
-          <Send size={18} />
+          <Send size={16} />
         </button>
       </form>
     </div>
