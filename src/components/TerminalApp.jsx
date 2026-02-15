@@ -109,7 +109,7 @@ export default function TerminalApp({
         {level.type === "visual" && (
           <div className="bg-white p-3 text-center select-text mt-2 text-black font-bold rounded cursor-text">
             {/* White text on white background */}
-            <span className="text-white select-all">PHX101</span>
+            <span className="text-white select-all">CYPHX2x1</span>
           </div>
         )}
         {level.type === "html_comment" && (
