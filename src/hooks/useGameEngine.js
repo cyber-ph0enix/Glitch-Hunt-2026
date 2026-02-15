@@ -3,8 +3,6 @@ import { LEVELS, sha256, EVENT_CONFIG } from "../data/gameConfig";
 import Papa from "papaparse";
 
 export function useGameEngine() {
-  // --- 1. STATE WITH LAZY INITIALIZATION (Fixes "Cascading Renders") ---
-
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("ph0enix_user");
     return saved ? JSON.parse(saved) : null;
@@ -16,16 +14,11 @@ export function useGameEngine() {
   });
 
   const [messages, setMessages] = useState([]);
-
-  // Lazy init for Date.now() prevents "Impure function" error
   const [levelStartTime, setLevelStartTime] = useState(() => Date.now());
   const [manualLeaks, setManualLeaks] = useState([]);
 
-  // --- 2. HELPER FUNCTIONS (Defined BEFORE usage) ---
-
   const addMessage = (sender, text, id = null) => {
     setMessages((prev) => {
-      // Prevent duplicates based on ID
       const newId = id || Date.now();
       if (prev.some((m) => m.id === newId)) return prev;
 
@@ -44,19 +37,27 @@ export function useGameEngine() {
     });
   };
 
-  const reportScore = (userData, lvl) => {
-    // Check if URL exists and is a string before checking startsWith
+  // REPORTING FUNCTION
+  const reportScore = (userData, lvl, action = "UPDATE") => {
     const url = EVENT_CONFIG.googleScriptUrl;
     if (!url || typeof url !== "string" || !url.startsWith("http")) {
-      console.warn("Score reporting disabled (Missing/Invalid URL)");
       return;
     }
+
+    const payload = {
+      uid: userData.uid,
+      name: userData.name,
+      level: lvl,
+      credits: userData.credits,
+      action: action,
+      device: navigator.userAgent,
+    };
 
     fetch(url, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...userData, level: lvl }),
+      body: JSON.stringify(payload),
     }).catch((err) => console.log("Report error:", err));
   };
 
@@ -65,8 +66,7 @@ export function useGameEngine() {
     const newUser = { name, uid, credits: 0 };
     setUser(newUser);
     localStorage.setItem("ph0enix_user", JSON.stringify(newUser));
-    reportScore(newUser, 0);
-    // Add welcome message immediately upon login
+    reportScore(newUser, 0, "LOGIN");
     addMessage(
       "System",
       "Ph0enixOS Loaded. Check 'Notes' for Rules.",
@@ -87,7 +87,7 @@ export function useGameEngine() {
 
       setUser(updatedUser);
       setCurrentLevelIndex(nextLvl);
-      setLevelStartTime(Date.now()); // Reset timer for hint
+      setLevelStartTime(Date.now());
 
       localStorage.setItem("ph0enix_user", JSON.stringify(updatedUser));
       localStorage.setItem("ph0enix_level", nextLvl);
@@ -96,7 +96,7 @@ export function useGameEngine() {
         "System",
         `Level ${level.id} Cleared. +${level.reward} Credits.`,
       );
-      reportScore(updatedUser, nextLvl);
+      reportScore(updatedUser, nextLvl, "SOLVED");
 
       return { success: true, msg: "Access Granted." };
     }
@@ -117,14 +117,11 @@ export function useGameEngine() {
     localStorage.setItem("ph0enix_level", nextLvl);
 
     addMessage("System", `Level Skipped. -250 Credits.`);
-    reportScore(updatedUser, nextLvl);
+    reportScore(updatedUser, nextLvl, "SKIPPED");
 
     return { success: true, msg: "Skipping..." };
   };
 
-  // --- 3. EFFECTS ---
-
-  // Auto Hints System
   useEffect(() => {
     if (!user || currentLevelIndex >= LEVELS.length) return;
 
@@ -134,17 +131,14 @@ export function useGameEngine() {
 
       if (elapsed > level.hintDelay) {
         const hintId = `hint_${level.id}`;
-        // addMessage handles duplicate checking internally now
         addMessage("Unknown", `[HINT]: ${level.hintText}`, hintId);
       }
-    }, 5000); // Check every 5 seconds
+    }, 5000);
 
     return () => clearInterval(timer);
-  }, [currentLevelIndex, levelStartTime, user]); // Minimal dependencies
+  }, [currentLevelIndex, levelStartTime, user]);
 
-  // Manual Leaks (Google Sheets CSV)
   useEffect(() => {
-    // Safer check for the CSV URL
     const url = EVENT_CONFIG.googleSheetCsvUrl;
     if (!user || !url || typeof url !== "string" || !url.startsWith("http"))
       return;
@@ -154,7 +148,6 @@ export function useGameEngine() {
         download: true,
         header: true,
         complete: (results) => {
-          // Safety check for data existence
           if (!results || !results.data) return;
 
           const newLeaks = results.data.map((r) => r.message).filter((m) => m);

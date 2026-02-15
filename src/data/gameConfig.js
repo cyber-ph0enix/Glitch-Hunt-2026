@@ -1,4 +1,3 @@
-// --- CONFIGURATION ---
 export const EVENT_CONFIG = {
   eventName: "Glitch Hunt 2026",
   ownerName: import.meta.env.VITE_OWNER_NAME || "CyberPh0enix",
@@ -8,26 +7,14 @@ export const EVENT_CONFIG = {
   googleSheetCsvUrl: import.meta.env.VITE_GOOGLE_SHEET_CSV_URL,
 };
 
-export const RULEBOOK = `
-# PH0ENIX PROTOCOL v4.0
-
-1. **OBJECTIVE**: Breach Riverstone Corp.
-2. **TOOLS**: Terminal, Browser, Messages.
-3. **SCORING**: 
-   - Win: +100 Credits
-   - Skip: -250 Credits
-4. **HINTS**: Auto-hints arrive if stuck > 3 mins.
-`;
-
 export const LEVELS = [
   {
     id: 0,
     title: "INITIATION",
     prompt: "The system ignores 'White Noise'. Highlight the anomaly.",
     type: "visual",
-    // Plain: "WAKE_UP_NEO"
     answerHash:
-      "8f683457591465a95383561a0529d38c127453d1004300e84b726084c0c1735d",
+      "301655f566436402802058300266014457630737466540602410360340530504",
     hintDelay: 60,
     hintText: "Text is white on white background. Select/Highlight it.",
     reward: 50,
@@ -37,11 +24,10 @@ export const LEVELS = [
     title: "SOURCE_LEAK",
     prompt: "A developer left a debug key in the DOM comments.",
     type: "html_comment",
-    // Plain: "DEV_BACKDOOR_X7"
     answerHash:
       "d078170e55726df9425482e9d2179854df11079d375323984501a57f8623253b",
     hintDelay: 120,
-    hintText: "Right Click -> Inspect Element. Search for <!-- comments -->",
+    hintText: "Right Click -> Inspect Element. Search for ",
     reward: 100,
   },
   {
@@ -49,7 +35,6 @@ export const LEVELS = [
     title: "PACKET_SNIFFER",
     prompt: "Server rejecting connections. Check Network Response.",
     type: "browser",
-    // Plain: "STATUS_418_TEAPOT"
     answerHash:
       "9781898555469905d4653f58a741364210a4e760086c52a093740e532b2e0436",
     hintDelay: 180,
@@ -62,7 +47,6 @@ export const LEVELS = [
     title: "SUDO_FORCE",
     prompt: "Client-side privilege check detected.",
     type: "console",
-    // Plain: "ROOT_ACCESS_GRANTED"
     answerHash:
       "0a830954707324c45e691238806371c668b55577609217621c107293a9712a32",
     hintDelay: 240,
@@ -75,7 +59,6 @@ export const LEVELS = [
     prompt: "Decrypt the Base64 signal.",
     type: "encoding",
     content: "U0VDUkVUX0FHRU5UX01BTg==",
-    // Plain: "SECRET_AGENT_MAN"
     answerHash:
       "2204620570997193655383569426372134547285600649722883307730953187",
     hintDelay: 300,

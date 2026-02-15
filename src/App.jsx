@@ -15,20 +15,14 @@ import {
   ChevronLeft,
   Home,
   Square,
-  Minimize2,
-  Maximize2,
 } from "lucide-react";
 
-// --- IMPORT MODULAR APPS ---
-// Ensure these files exist in src/components/apps/
+// app components
 import TerminalApp from "./components/TerminalApp";
 import MessagesApp from "./components/MessagesApp";
 import NotesApp from "./components/NotesApp";
 import BrowserApp from "./components/BrowserApp";
 import SettingsApp from "./components/SettingsApp";
-
-const NOTIFICATION_SOUND =
-  "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU";
 
 export default function App() {
   const { user, currentLevelIndex, messages, login, submitFlag, skipLevel } =
@@ -36,24 +30,54 @@ export default function App() {
   const [activeApp, setActiveApp] = useState(null);
   const [booted, setBooted] = useState(false);
   const [time, setTime] = useState("");
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Sound Effect Helper
-  const notify = () => {
-    if (SYSTEM_INFO?.vibrationEnabled && navigator.vibrate)
-      navigator.vibrate(200);
-    if (SYSTEM_INFO?.soundEnabled) {
-      try {
-        new Audio(NOTIFICATION_SOUND).play().catch(() => {});
-      } catch (e) {}
+  // AUDIO ENGINE
+  const playSound = (type = "notification") => {
+    if (!SYSTEM_INFO?.soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+
+      if (type === "error") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === "success") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else {
+        // Notification
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, now);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
+    } catch (e) {
+      console.error("Audio error", e);
     }
   };
 
   useEffect(() => {
-    if (messages.length > 0) notify();
+    if (messages.length > 0) playSound("notification");
   }, [messages.length]);
 
-  // Time Sync
   useEffect(() => {
     const t = setInterval(() => {
       setTime(
@@ -70,98 +94,84 @@ export default function App() {
   if (!booted) return <BootScreen onComplete={() => setBooted(true)} />;
   if (!user) return <LoginScreen onLogin={login} />;
 
-  // Dynamic Sizing Logic for "Native Feel"
+  // FIXED CONTAINER CLASS (Responsive: Full on mobile, Phone on Desktop)
   const containerClass =
-    isFullscreen || window.innerWidth < 768
-      ? "fixed inset-0 w-full h-full rounded-none border-0"
-      : "relative h-[85vh] w-auto aspect-[9/19] max-h-[900px] rounded-[2.5rem] border-[8px] shadow-2xl";
+    "fixed inset-0 md:relative md:h-[85vh] md:w-auto md:aspect-[9/19] md:max-h-[900px] md:rounded-[3rem] md:border-[12px] md:border-[#1a1a1a] md:shadow-2xl overflow-hidden bg-black flex flex-col ring-1 ring-white/10";
 
   return (
-    <div className="min-h-screen w-full bg-[#111] flex items-center justify-center font-mono select-none overflow-hidden md:p-4">
+    <div className="min-h-screen w-full bg-[#0a0a0a] flex items-center justify-center font-mono select-none overflow-hidden md:p-4">
       {/* PHONE CONTAINER */}
-      <div
-        className={`${containerClass} transition-all duration-300 ease-in-out bg-black overflow-hidden flex flex-col border-neutral-800 relative`}
-      >
-        {/* CRT SCANLINE EFFECT */}
-        <div className="scanline opacity-5 pointer-events-none absolute inset-0 z-50"></div>
+      <div className={containerClass}>
+        {/* SCANLINE OVERLAY */}
+        <div className="absolute inset-0 pointer-events-none z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-20"></div>
 
-        {/* STATUS BAR (Global Overlay) */}
-        <div className="absolute top-0 left-0 right-0 h-8 bg-black/90 text-white flex justify-between items-center px-5 text-[10px] z-[60]">
-          <span className="font-bold tracking-widest">{time}</span>
+        {/* STATUS BAR */}
+        <div className="h-10 bg-gradient-to-b from-black/80 to-transparent text-white flex justify-between items-center px-6 text-[11px] font-bold z-[60] shrink-0 pt-2">
+          <span className="tracking-widest">{time}</span>
           <div className="flex gap-2 items-center">
-            <Signal size={10} className="text-green-500" />
-            <Wifi size={10} className="text-green-500" />
-            <Battery size={12} className="text-green-500" />
+            <Signal size={12} className="text-green-500" />
+            <Wifi size={12} className="text-green-500" />
+            <Battery size={14} className="text-green-500" />
           </div>
         </div>
 
         {/* WALLPAPER & DESKTOP */}
         <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center flex flex-col overflow-hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"></div>
-
-          {/* DESKTOP CONTROLS (PC Only - Maximize Button) */}
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="absolute top-10 left-4 z-20 text-white/20 hover:text-white md:block hidden transition-colors"
-          >
-            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-          </button>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[0px]"></div>
 
           {/* CLOCK WIDGET */}
-          <div className="relative z-10 pt-16 text-center text-white/80 pointer-events-none">
+          <div className="relative z-10 pt-12 text-center text-white/90 pointer-events-none">
             <h1 className="text-6xl font-thin tracking-tighter mb-1">
               {time.split(" ")[0]}
             </h1>
-            <p className="text-[10px] tracking-[0.5em] uppercase opacity-60">
+            <p className="text-[10px] tracking-[0.4em] uppercase opacity-70">
               {time.split(" ")[1]}
             </p>
-            <p className="text-[8px] mt-2 opacity-40">{SYSTEM_INFO.owner}</p>
           </div>
 
           {/* APP GRID */}
-          <div className="relative z-10 mt-auto mb-28 px-6 grid grid-cols-4 gap-y-8 gap-x-4">
+          <div className="relative z-10 mt-auto mb-20 px-6 grid grid-cols-4 gap-y-6 gap-x-2">
             <AppIcon
               icon={Terminal}
               label="Terminal"
-              color="bg-green-900/80 border border-green-500/30"
+              color="bg-neutral-800/90 border border-green-500/20"
               onClick={() => setActiveApp("terminal")}
               notification={currentLevelIndex < LEVELS.length}
             />
             <AppIcon
               icon={MessageSquare}
               label="Messages"
-              color="bg-blue-900/80 border border-blue-500/30"
+              color="bg-neutral-800/90 border border-blue-500/20"
               onClick={() => setActiveApp("messages")}
               notification={messages.length > 0}
             />
             <AppIcon
               icon={StickyNote}
               label="Notes"
-              color="bg-yellow-900/80 border border-yellow-500/30"
+              color="bg-neutral-800/90 border border-yellow-500/20"
               onClick={() => setActiveApp("notes")}
             />
             <AppIcon
               icon={Globe}
               label="Browser"
-              color="bg-indigo-900/80 border border-indigo-500/30"
+              color="bg-neutral-800/90 border border-indigo-500/20"
               onClick={() => setActiveApp("browser")}
             />
             <AppIcon
               icon={Settings}
               label="Settings"
-              color="bg-gray-800/80 border border-gray-500/30"
+              color="bg-neutral-800/90 border border-gray-500/20"
               onClick={() => setActiveApp("settings")}
             />
           </div>
 
-          {/* DOCK (Visual Only) */}
-          <div className="absolute bottom-6 left-4 right-4 h-20 bg-white/5 backdrop-blur-xl rounded-3xl mx-auto z-0 border border-white/5"></div>
+          {/* DOCK BACKDROP */}
+          <div className="absolute bottom-4 left-4 right-4 h-20 bg-white/5 backdrop-blur-md rounded-3xl mx-auto z-0 border border-white/5"></div>
         </div>
 
-        {/* ACTIVE APP WINDOW (Full Overlay) */}
+        {/* ACTIVE APP WINDOW */}
         {activeApp && (
-          <div className="absolute inset-0 z-40 bg-black flex flex-col animate-[slide-up_0.25s_cubic-bezier(0.16,1,0.3,1)]">
-            {/* APP CONTENT AREA - Loads Modular Components */}
+          <div className="absolute inset-0 z-40 bg-[#050505] flex flex-col animate-[slide-up_0.25s_cubic-bezier(0.16,1,0.3,1)]">
             <div className="flex-1 overflow-hidden relative bg-neutral-900">
               {activeApp === "terminal" && (
                 <TerminalApp
@@ -169,6 +179,7 @@ export default function App() {
                   onSubmit={submitFlag}
                   onSkip={skipLevel}
                   credits={user.credits}
+                  playSound={playSound}
                 />
               )}
               {activeApp === "messages" && <MessagesApp messages={messages} />}
@@ -181,23 +192,23 @@ export default function App() {
           </div>
         )}
 
-        {/* NAVIGATION BAR (Android Style) */}
-        <div className="h-12 bg-black flex justify-around items-center text-gray-400 z-[60] shrink-0 border-t border-neutral-800">
+        {/* NAVIGATION BAR */}
+        <div className="h-12 bg-black flex justify-around items-center text-gray-400 z-[60] shrink-0 border-t border-neutral-900">
           <button
             onClick={() => setActiveApp(null)}
-            className="p-4 active:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="p-4 active:text-white transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={() => setActiveApp(null)}
-            className="p-4 active:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="p-4 active:text-white transition-colors"
           >
             <Home size={20} />
           </button>
           <button
             onClick={() => setActiveApp(null)}
-            className="p-4 active:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="p-4 active:text-white transition-colors"
           >
             <Square size={16} fill="currentColor" className="opacity-50" />
           </button>
@@ -207,11 +218,10 @@ export default function App() {
   );
 }
 
-// --- SHARED SYSTEM COMPONENTS ---
-
+// --- SHARED COMPONENTS (Keep these as they were or minimal updates) ---
 const BootScreen = ({ onComplete }) => {
   useEffect(() => {
-    const t = setTimeout(onComplete, 2500);
+    const t = setTimeout(onComplete, 2000);
     return () => clearTimeout(t);
   }, [onComplete]);
   return (
@@ -240,7 +250,6 @@ const LoginScreen = ({ onLogin }) => {
           <h2 className="text-xl text-white font-bold tracking-wider">
             IDENTITY VERIFICATION
           </h2>
-          <p className="text-xs text-green-700 mt-1">Secure Gateway Access</p>
         </div>
         <input
           value={name}
@@ -272,7 +281,7 @@ const AppIcon = ({ icon: Icon, label, color, onClick, notification }) => (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse"></div>
       )}
     </div>
-    <span className="text-[10px] text-gray-300 font-medium tracking-tight group-hover:text-white transition-colors">
+    <span className="text-[10px] text-gray-400 font-medium tracking-tight group-hover:text-white transition-colors">
       {label}
     </span>
   </button>

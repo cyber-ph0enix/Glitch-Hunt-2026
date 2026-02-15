@@ -1,28 +1,40 @@
-# **Ph0enixOS // Glitch Hunt 2026**
+# Ph0enixOS
 
-An immersive, "fake OS" web application for hosting CTF/OSINT events. Features a functional terminal, simulated browser, and real-time "whistleblower" leak system via Google Sheets.  
-**Tech Stack:** React (Vite), Tailwind CSS v3, Google Sheets (Backend), Nix/Flakes.
+Tech Stack:
+
+- React (Vite)
+- Tailwind CSS v3
+- Google Sheets as backend
+- Nix Flake development environments
 
 ## **⚡ Quick Start (Dev)**
 
-**1\. Environment Setup**  
-Ensure you have [Nix](https://nixos.org/download.html) installed.  
-nix develop \# Enters the reproducible Node.js environment  
-npm install \# Installs dependencies
+Follow these steps to get a developer environment running locally.
 
-**2\. Configure Secrets**  
-Create a .env file in the root directory:  
-OWNER_NAME="Your Club Name"  
-GOOGLE_SCRIPT_URL="\<Your_Apps_Script_Web_App_URL\>"  
-GOOGLE_SHEET_CSV_URL="\<Your_Google_Sheet_Published_CSV_URL\>"
+1. Environment setup
 
-**3\. Run**  
+```bash
+nix develop
+npm install
+```
+
+2. Create a `.env` file:
+
+```dotenv
+VITE_OWNER_NAME="Your Name"
+VITE_GOOGLE_SCRIPT_URL="https://script.google.com/your-apps-script-url"
+VITE_GOOGLE_SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/.../pub?output=csv"
+```
+
+3. Run locally
+
+```bash
 npm run dev
+```
 
 ## **🚀 Deployment (Vercel)**
 
-1. Push code to GitHub (ensure .env is **not** included).
-2. Import project to **Vercel**.
-3. Add the **Environment Variables** (from .env) in Vercel Project Settings.
-4. Deploy.
-
+1. Push your repo to GitHub.
+2. Import the repo into vercel.
+3. Add env vars in vercel.
+4. Deploy & build.

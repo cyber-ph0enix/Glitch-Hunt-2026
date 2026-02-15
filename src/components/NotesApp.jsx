@@ -1,8 +1,7 @@
 import React from "react";
 import { StickyNote } from "lucide-react";
-import { RULEBOOK } from "../data/gameConfig";
+import { RULEBOOK } from "../data/rules";
 
-// Simple Markdown Parser for **Bold**
 const SimpleMarkdown = ({ text }) => {
   if (!text) return null;
   const parts = text.split(/(\*\*.*?\*\*)/g);
