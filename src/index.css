@@ -2,28 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --terminal-green: #22c55e;
+  --terminal-bg: #050505;
+}
+
 body {
-  background-color: #050505;
-  color: #0f0;
   margin: 0;
+  background-color: #000;
   overflow: hidden;
+  user-select: none;
 }
 
-/* Cyberpunk Scrollbar */
+/* SCROLLBAR */
 ::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #111;
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #0f0;
+  width: 8px;
+  height: 8px;
 }
 
-.font-handwriting {
-  font-family: "Courier New", monospace;
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #22c55e; /* Green on hover */
+  border-color: #00ff00;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333 #0a0a0a;
+}
+
+/* --- ANIMATIONS --- */
+@keyframes bootUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-boot {
+  animation: bootUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glitch Text Effect for Error Pages */
+.glitch-text {
+  text-shadow:
+    2px 0 #ff0000,
+    -2px 0 #0000ff;
+  animation: glitch 0.5s infinite;
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
 }
