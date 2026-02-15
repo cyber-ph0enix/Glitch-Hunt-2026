@@ -114,11 +114,12 @@ export default function TerminalApp({
         )}
         {level.type === "html_comment" && (
           <div
-            className="text-gray-700 text-center border border-gray-800 p-2 mt-2 select-none font-bold"
-            dangerouslySetInnerHTML={{
-              __html: "Inspect Element.",
-            }}
-          ></div>
+            data-secret="DEV_BACKDOOR_X7"
+            className="text-gray-700 text-center border border-gray-800 p-2 mt-2 select-none font-bold cursor-help"
+            title="Right Click > Inspect"
+          >
+            Inspect Element.
+          </div>
         )}
         {level.type === "console" && (
           <button
