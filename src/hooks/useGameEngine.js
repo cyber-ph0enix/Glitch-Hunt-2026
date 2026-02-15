@@ -45,19 +45,19 @@ export function useGameEngine() {
   };
 
   const reportScore = (userData, lvl) => {
-    // Check if URL is valid before sending (avoids errors in dev)
-    if (
-      !EVENT_CONFIG.googleScriptUrl ||
-      !EVENT_CONFIG.googleScriptUrl.startsWith("http")
-    )
+    // Check if URL exists and is a string before checking startsWith
+    const url = EVENT_CONFIG.googleScriptUrl;
+    if (!url || typeof url !== "string" || !url.startsWith("http")) {
+      console.warn("Score reporting disabled (Missing/Invalid URL)");
       return;
+    }
 
-    fetch(EVENT_CONFIG.googleScriptUrl, {
+    fetch(url, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...userData, level: lvl }),
-    }).catch((err) => console.log("Score report skipped (Dev mode)"));
+    }).catch((err) => console.log("Report error:", err));
   };
 
   const login = (name) => {
@@ -144,27 +144,30 @@ export function useGameEngine() {
 
   // Manual Leaks (Google Sheets CSV)
   useEffect(() => {
-    if (!user || !EVENT_CONFIG.googleSheetCsvUrl.startsWith("http")) return;
+    // Safer check for the CSV URL
+    const url = EVENT_CONFIG.googleSheetCsvUrl;
+    if (!user || !url || typeof url !== "string" || !url.startsWith("http"))
+      return;
 
     const fetchLeaks = () => {
-      Papa.parse(EVENT_CONFIG.googleSheetCsvUrl, {
+      Papa.parse(url, {
         download: true,
         header: true,
         complete: (results) => {
-          // Expects CSV column: "message"
-          const newLeaks = results.data.map((r) => r.message).filter((m) => m);
+          // Safety check for data existence
+          if (!results || !results.data) return;
 
+          const newLeaks = results.data.map((r) => r.message).filter((m) => m);
           if (newLeaks.length > manualLeaks.length) {
             const latest = newLeaks[newLeaks.length - 1];
             addMessage("The Architect", latest, `leak_${Date.now()}`);
             setManualLeaks(newLeaks);
           }
         },
-        error: () => console.log("Leak fetch failed (likely network or CORS)"),
+        error: (err) => console.log("Leak fetch skipped"),
       });
     };
-
-    const poller = setInterval(fetchLeaks, 20000); // Poll every 20s
+    const poller = setInterval(fetchLeaks, 20000);
     return () => clearInterval(poller);
   }, [user, manualLeaks]);
 

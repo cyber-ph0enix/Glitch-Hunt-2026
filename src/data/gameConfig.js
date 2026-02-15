@@ -1,11 +1,11 @@
 // --- CONFIGURATION ---
 export const EVENT_CONFIG = {
   eventName: "Glitch Hunt 2026",
-  ownerName: import.meta.env.OWNER_NAME || "CyberPh0enix",
+  ownerName: import.meta.env.VITE_OWNER_NAME || "CyberPh0enix",
   // SCOREBOARD (Write)
-  googleScriptUrl: import.meta.env.GOOGLE_SCRIPT_URL,
+  googleScriptUrl: import.meta.env.VITE_GOOGLE_SCRIPT_URL,
   // LEAKS (Read)
-  googleSheetCsvUrl: import.meta.env.GOOGLE_SHEET_CSV_URL,
+  googleSheetCsvUrl: import.meta.env.VITE_GOOGLE_SHEET_CSV_URL,
 };
 
 export const RULEBOOK = `
