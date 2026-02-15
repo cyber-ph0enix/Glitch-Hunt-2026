@@ -109,16 +109,17 @@ export default function TerminalApp({
         {level.type === "visual" && (
           <div className="bg-white p-3 text-center select-text mt-2 text-black font-bold rounded cursor-text">
             {/* White text on white background */}
-            <span className="text-white select-all">PHX101</span>
+            <span className="text-white select-all">CYPHX2x1</span>
           </div>
         )}
         {level.type === "html_comment" && (
           <div
-            className="text-gray-700 text-center border border-gray-800 p-2 mt-2 select-none font-bold"
-            dangerouslySetInnerHTML={{
-              __html: "Inspect Element.",
-            }}
-          ></div>
+            data-secret="DEV_BACKDOOR_X7"
+            className="text-gray-700 text-center border border-gray-800 p-2 mt-2 select-none font-bold cursor-help"
+            title="Right Click > Inspect"
+          >
+            Inspect Element.
+          </div>
         )}
         {level.type === "console" && (
           <button
