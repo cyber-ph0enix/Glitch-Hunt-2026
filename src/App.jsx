@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useGameEngine } from "./hooks/useGameEngine";
 import { LEVELS } from "./data/gameConfig";
 import { SYSTEM_INFO } from "./data/build.prop";
@@ -21,6 +21,7 @@ import {
   X,
   Minus,
   Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 import TerminalApp from "./components/TerminalApp";
@@ -37,7 +38,7 @@ export default function App() {
   const [time, setTime] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // --- AUDIO ENGINE ---
+  // Audio Engine
   const playSound = (type = "click") => {
     if (!SYSTEM_INFO?.soundEnabled) return;
     try {
@@ -47,54 +48,47 @@ export default function App() {
       osc.connect(gain);
       gain.connect(ctx.destination);
       const now = ctx.currentTime;
-
       if (type === "success") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.start(now);
-        osc.stop(now + 0.3);
       } else {
-        // UI Click
         osc.type = "triangle";
         osc.frequency.setValueAtTime(2000, now);
         gain.gain.setValueAtTime(0.02, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-        osc.start(now);
-        osc.stop(now + 0.05);
       }
+      osc.start(now);
+      osc.stop(now + 0.3);
     } catch (e) {}
   };
 
-  // --- RESPONSIVE LISTENER ---
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // --- TIME SYNC ---
   useEffect(() => {
-    const t = setInterval(() => {
-      setTime(
-        new Date().toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      );
-    }, 1000);
+    const t = setInterval(
+      () =>
+        setTime(
+          new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }),
+        ),
+      1000,
+    );
     return () => clearInterval(t);
   }, []);
 
   if (!booted) return <BootScreen onComplete={() => setBooted(true)} />;
   if (!user) return <LoginScreen onLogin={login} />;
 
-  // --- DYNAMIC APPS LIST ---
-  // If we are on mobile, all apps are in the grid.
-  // If on desktop, "pinned" apps are in the dock, others in grid.
   const ALL_APPS = [
     {
       id: "terminal",
@@ -116,6 +110,7 @@ export default function App() {
     { id: "camera", label: "Cam", icon: Camera, color: "text-red-400" },
   ];
 
+  // Logic: On mobile, we show ALL apps in grid. On desktop, we hide pinned apps from grid.
   const PINNED_APPS = [
     "terminal",
     "messages",
@@ -127,12 +122,12 @@ export default function App() {
 
   return (
     <div className="fixed inset-0 bg-[#050505] font-mono text-gray-200 overflow-hidden flex flex-col">
-      {/* 1. STATUS BAR (Universal) */}
-      <div className="h-8 bg-black/60 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-4 text-[11px] font-bold z-50 shrink-0">
+      {/* STATUS BAR */}
+      <div className="h-8 bg-black/40 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-4 text-[11px] font-bold z-50 shrink-0 select-none">
         <div className="flex items-center gap-3">
           <span className="text-white tracking-widest">{time}</span>
           <span className="hidden md:inline px-2 py-0.5 bg-white/10 rounded text-[9px] text-green-400 tracking-wider">
-            {isMobile ? "MOBILE_DATA" : "ETHERNET_CONNECTED"}
+            {isMobile ? "4G_LTE" : "ETH_01 :: CONNECTED"}
           </span>
         </div>
         <div className="flex gap-3 items-center">
@@ -145,17 +140,20 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. MAIN WORKSPACE */}
+      {/* WORKSPACE */}
       <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center overflow-hidden group">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
 
-        {/* DESKTOP GRID (Universal, but hidden if App is Open on Mobile) */}
+        {/* APP GRID */}
+        {/* On Mobile: Show ALL apps. On Desktop: Show only unpinned (or all if you prefer). */}
+        {/* FIX: Removed the logic that hid apps on mobile. Now simple and robust. */}
         <div
           className={`absolute inset-0 p-6 grid grid-cols-4 md:grid-cols-8 gap-4 content-start transition-opacity duration-300 ${activeApp && isMobile ? "opacity-0 pointer-events-none" : "opacity-100"}`}
         >
-          {ALL_APPS.map((app) =>
-            // On Desktop, hide Pinned apps from Grid (they are in Dock). On Mobile, show all.
-            !isMobile || !PINNED_APPS.includes(app.id) ? (
+          {ALL_APPS.map((app) => {
+            // Desktop: Hide pinned apps from grid to clean up UI (optional, but requested behavior)
+            if (!isMobile && PINNED_APPS.includes(app.id)) return null;
+            return (
               <button
                 key={app.id}
                 onClick={() => {
@@ -164,23 +162,23 @@ export default function App() {
                 }}
                 className="flex flex-col items-center gap-2 group/icon"
               >
-                <div className="w-14 h-14 bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-lg group-hover/icon:bg-white/10 transition-all">
+                <div className="w-14 h-14 bg-black/40 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-lg group-hover/icon:bg-white/10 group-hover/icon:scale-105 transition-all duration-200">
                   <app.icon size={24} className={app.color} />
                   {app.notify && (
                     <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                   )}
                 </div>
-                <span className="text-[10px] text-gray-300 bg-black/50 px-2 rounded backdrop-blur-sm">
+                <span className="text-[10px] text-gray-300 bg-black/50 px-2 rounded backdrop-blur-sm shadow-sm">
                   {app.label}
                 </span>
               </button>
-            ) : null,
-          )}
+            );
+          })}
         </div>
 
-        {/* ACTIVE APP WINDOW */}
+        {/* ACTIVE WINDOW */}
         {activeApp && (
-          <AppWindow
+          <DraggableWindow
             appId={activeApp}
             isMobile={isMobile}
             onClose={() => setActiveApp(null)}
@@ -200,23 +198,22 @@ export default function App() {
               <BrowserApp levelId={currentLevelIndex} />
             )}
             {activeApp === "settings" && <SettingsApp user={user} />}
-            {/* Stub for new apps */}
             {(activeApp === "files" || activeApp === "camera") && (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 text-xs font-mono p-8 text-center">
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 text-xs font-mono p-8 text-center select-none">
                 <Cpu size={48} className="mb-4 opacity-20" />
-                [ MODULE ENCRYPTED ]<br />
-                ACCESS DENIED BY ADMINISTRATOR
+                <div className="border border-red-900/30 bg-red-900/10 p-4 rounded">
+                  <p className="text-red-400 font-bold mb-1">ACCESS DENIED</p>
+                  <p className="opacity-50">MODULE ENCRYPTED</p>
+                </div>
               </div>
             )}
-          </AppWindow>
+          </DraggableWindow>
         )}
       </div>
 
-      {/* 3. FOOTER AREA (Dual Mode) */}
-
-      {/* MODE A: MOBILE NAVBAR (Only visible on Mobile) */}
-      {isMobile && (
-        <div className="h-12 bg-black border-t border-[#222] flex justify-around items-center text-gray-400 z-50 shrink-0 pb-1">
+      {/* FOOTER: NAVBAR (Mobile) OR DOCK (Desktop) */}
+      {isMobile ? (
+        <div className="h-14 bg-black border-t border-[#222] flex justify-around items-center text-gray-400 z-50 shrink-0 pb-2">
           <button
             onClick={() => setActiveApp(null)}
             className="p-4 active:text-white active:scale-95 transition-all"
@@ -229,16 +226,14 @@ export default function App() {
           >
             <Home size={22} />
           </button>
-          <button className="p-4 opacity-50 cursor-not-allowed">
+          <button className="p-4 opacity-30">
             <Square size={18} fill="currentColor" />
           </button>
         </div>
-      )}
-
-      {/* MODE B: DESKTOP DOCK (Only visible on Desktop) */}
-      {!isMobile && (
+      ) : (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100]">
-          <div className="glass-panel rounded-2xl px-4 py-3 flex gap-4 shadow-2xl items-end">
+          {/* DOCK CONTAINER: Fixed Height to prevent jumping */}
+          <div className="glass-panel h-16 rounded-2xl px-4 flex gap-3 shadow-2xl items-center justify-center relative">
             {PINNED_APPS.map((id) => {
               const app = ALL_APPS.find((a) => a.id === id);
               return (
@@ -256,16 +251,6 @@ export default function App() {
                 />
               );
             })}
-            {/* Separator for unpinned active apps could go here */}
-            <div className="w-[1px] h-8 bg-white/10 mx-2 self-center"></div>
-            <button className="group relative p-2 rounded-xl hover:bg-white/10 transition-all">
-              <div className="grid grid-cols-2 gap-0.5 w-6 h-6 opacity-50 group-hover:opacity-100">
-                <div className="bg-white rounded-[1px]"></div>
-                <div className="bg-white rounded-[1px]"></div>
-                <div className="bg-white rounded-[1px]"></div>
-                <div className="bg-white rounded-[1px]"></div>
-              </div>
-            </button>
           </div>
         </div>
       )}
@@ -273,19 +258,85 @@ export default function App() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+// --- DRAGGABLE WINDOW COMPONENT ---
+const DraggableWindow = ({ appId, isMobile, onClose, children }) => {
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 }); // Offset from center
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
-// 1. AppWindow: The wrapper that handles Scrolling & Minimizing
-const AppWindow = ({ appId, isMobile, onClose, children }) => {
-  // Mobile: Fullscreen. Desktop: Centered Floating Window.
-  const windowClass = isMobile
-    ? "absolute inset-0 z-40 bg-[#050505] flex flex-col animate-in slide-in-from-bottom duration-300"
-    : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[80%] max-w-5xl bg-[#0a0a0a] border border-[#333] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-40 ring-1 ring-white/10";
+  // Center window on mount
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+    setIsMaximized(false);
+  }, [appId]);
+
+  const handleMouseDown = (e) => {
+    if (isMaximized || isMobile) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      setPosition({
+        x: e.clientX - dragStartRef.current.x,
+        y: e.clientY - dragStartRef.current.y,
+      });
+    };
+    const handleMouseUp = () => setIsDragging(false);
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Dynamic Classes based on state
+  // Mobile: Always fixed inset-0.
+  // Desktop:
+  //   - Maximized: fixed inset-0 m-4 rounded-xl
+  //   - Windowed: fixed center + transform translate
+
+  const mobileClass =
+    "absolute inset-0 z-40 bg-[#050505] flex flex-col animate-in slide-in-from-bottom duration-300";
+
+  const desktopBase =
+    "absolute z-40 bg-[#0a0a0a] border border-[#333] shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10 window-transition";
+
+  const desktopMaximized = "inset-4 rounded-xl";
+  const desktopWindowed = "w-[800px] h-[600px] rounded-xl"; // Fixed default size
+
+  // Calculate style for desktop windowed mode
+  const windowStyle =
+    !isMobile && !isMaximized
+      ? {
+          left: `calc(50% + ${position.x}px)`,
+          top: `calc(50% + ${position.y}px)`,
+          transform: "translate(-50%, -50%)",
+        }
+      : {};
+
+  const finalClass = isMobile
+    ? mobileClass
+    : `${desktopBase} ${isMaximized ? desktopMaximized : desktopWindowed}`;
 
   return (
-    <div className={windowClass}>
-      {/* WINDOW HEADER (Visible on Desktop OR Mobile if preferred) */}
-      <div className="h-9 bg-[#111] border-b border-[#222] flex items-center justify-between px-3 shrink-0 select-none">
+    <div className={finalClass} style={windowStyle}>
+      {/* HEADER / DRAG HANDLE */}
+      <div
+        onMouseDown={handleMouseDown}
+        onDoubleClick={() => !isMobile && setIsMaximized(!isMaximized)}
+        className={`h-9 bg-[#111] border-b border-[#222] flex items-center justify-between px-3 shrink-0 select-none ${!isMobile && !isMaximized ? "cursor-grab active:cursor-grabbing" : ""}`}
+      >
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -293,31 +344,31 @@ const AppWindow = ({ appId, isMobile, onClose, children }) => {
           </span>
         </div>
 
-        {/* Window Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {!isMobile && (
             <>
               <button
-                onClick={onClose}
-                className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white"
+                onClick={() => setIsMaximized(!isMaximized)}
+                className="p-1.5 hover:bg-white/10 rounded text-gray-500 hover:text-white transition-colors"
               >
-                <Minus size={12} />
-              </button>
-              <button className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white">
-                <Maximize2 size={12} />
+                {isMaximized ? (
+                  <Minimize2 size={12} />
+                ) : (
+                  <Maximize2 size={12} />
+                )}
               </button>
             </>
           )}
           <button
             onClick={onClose}
-            className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400 transition-colors"
+            className="p-1.5 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400 transition-colors"
           >
             <X size={14} />
           </button>
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA - This fixes the scroll bug */}
+      {/* CONTENT */}
       <div className="flex-1 overflow-y-auto relative custom-scrollbar bg-[#050505]">
         {children}
       </div>
@@ -325,29 +376,33 @@ const AppWindow = ({ appId, isMobile, onClose, children }) => {
   );
 };
 
-// 2. DockIcon: Handles the hover effects cleanly
+// --- STABLE DOCK COMPONENT ---
 const DockIcon = ({ icon: Icon, label, color, onClick, isActive, notify }) => {
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col items-center justify-end"
+      className="group relative flex flex-col items-center justify-center w-10"
     >
-      {/* Tooltip (Only on direct hover) */}
-      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/80 text-white text-[9px] px-2 py-1 rounded border border-white/10 pointer-events-none mb-2 whitespace-nowrap">
+      {/* Tooltip */}
+      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/90 text-white text-[9px] px-2 py-1 rounded border border-white/10 pointer-events-none whitespace-nowrap z-50">
         {label}
       </div>
 
-      {/* Icon Container */}
+      {/* Icon: Scale transform only, no layout shift */}
       <div
         className={`
-        w-12 h-12 rounded-xl flex items-center justify-center 
-        border transition-all duration-200 ease-out
-        ${isActive ? "bg-white/10 border-white/30 mb-2" : "bg-[#1a1a1a]/80 border-white/5 hover:mb-2 hover:scale-110 hover:bg-[#2a2a2a]"}
+        relative w-10 h-10 rounded-xl flex items-center justify-center 
+        transition-all duration-200 ease-out origin-bottom
+        group-hover:scale-125 group-hover:-translate-y-2
+        ${isActive ? "bg-white/10 border border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.1)]" : "bg-transparent hover:bg-[#2a2a2a]"}
       `}
       >
-        <Icon size={24} className={`${color} opacity-90`} />
+        <Icon
+          size={20}
+          className={`${color} ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}
+        />
         {notify && (
-          <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1a1a1a] animate-pulse"></div>
+          <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#000] animate-pulse"></div>
         )}
       </div>
 
