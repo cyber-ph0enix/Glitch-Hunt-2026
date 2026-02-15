@@ -10,16 +10,12 @@ export default function SettingsApp({ user }) {
     if (devEnabled) return;
     const newCount = clicks + 1;
     setClicks(newCount);
-
-    // Developer Unlock Mechanic
-    if (newCount >= 7) {
-      setDevEnabled(true);
-      // You can trigger a global unlock here later if you want
-    }
+    if (newCount >= 7) setDevEnabled(true);
   };
 
   return (
-    <div className="flex flex-col h-full bg-black text-white pt-8 px-4 font-sans">
+    // Note: We removed 'h-full' here so it flows naturally in the scrollable window
+    <div className="flex flex-col min-h-full bg-black text-white pt-8 px-4 font-sans pb-20">
       <div className="p-2 pb-4">
         <h2 className="font-bold text-2xl mb-1">Settings</h2>
         <p className="text-xs text-gray-500">System Configuration</p>
@@ -72,7 +68,6 @@ export default function SettingsApp({ user }) {
                 {SYSTEM_INFO.version}
               </span>
             </div>
-            {/* Build Number - Clickable */}
             <button
               onClick={handleBuildClick}
               className="w-full p-4 border-b border-neutral-800 flex justify-between items-center hover:bg-white/5 transition-colors text-left"
@@ -82,24 +77,12 @@ export default function SettingsApp({ user }) {
                 {SYSTEM_INFO.buildId}
               </span>
             </button>
-            <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-              <span className="text-sm">Developer</span>
-              <span className="text-xs text-green-500 font-bold">
-                {SYSTEM_INFO.developer}
-              </span>
-            </div>
-            <div className="p-4 flex justify-between items-center">
-              <span className="text-sm">Owner</span>
-              <span className="text-xs text-gray-500">{SYSTEM_INFO.owner}</span>
-            </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-auto p-6 text-center pb-20">
-        <p className="text-[10px] text-gray-700">
-          Ph0enixOS System Core. All rights reserved.
-        </p>
+      <div className="mt-auto p-6 text-center text-[10px] text-gray-700">
+        Ph0enixOS System Core. All rights reserved.
       </div>
     </div>
   );

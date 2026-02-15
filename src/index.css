@@ -3,42 +3,58 @@
 @tailwind utilities;
 
 :root {
-  --terminal-green: #22c55e;
-  --terminal-bg: #050505;
+  --dock-bg: rgba(20, 20, 20, 0.4);
+  --dock-border: rgba(255, 255, 255, 0.1);
 }
 
 body {
   margin: 0;
   background-color: #000;
-  overflow: hidden;
+  overflow: hidden; /* Prevent body scroll, handle inside app */
   user-select: none;
+  font-family: "Courier New", Courier, monospace; /* Fallback */
 }
 
-/* SCROLLBAR */
+/* --- UNIVERSAL SCROLLBARS --- */
+/* This ensures scrollbars appear on any element with overflow-y-auto */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 4px;
+  background: #333;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #22c55e; /* Green on hover */
-  border-color: #00ff00;
 }
 
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333 #0a0a0a;
+  scrollbar-color: #333 transparent;
+}
+
+/* --- UTILITIES --- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.glass-panel {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* --- ANIMATIONS --- */
@@ -59,7 +75,6 @@ body {
   animation: bootUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Glitch Text Effect for Error Pages */
 .glitch-text {
   text-shadow:
     2px 0 #ff0000,
