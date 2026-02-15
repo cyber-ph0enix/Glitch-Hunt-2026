@@ -15,9 +15,12 @@ import {
   Cpu,
   FolderOpen,
   Camera,
-  Music,
+  ChevronLeft,
+  Home,
+  Square,
+  X,
+  Minus,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 import TerminalApp from "./components/TerminalApp";
@@ -32,7 +35,7 @@ export default function App() {
   const [activeApp, setActiveApp] = useState(null);
   const [booted, setBooted] = useState(false);
   const [time, setTime] = useState("");
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // --- AUDIO ENGINE ---
   const playSound = (type = "click") => {
@@ -45,15 +48,7 @@ export default function App() {
       gain.connect(ctx.destination);
       const now = ctx.currentTime;
 
-      if (type === "error") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.linearRampToValueAtTime(100, now + 0.15);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc.start(now);
-        osc.stop(now + 0.15);
-      } else if (type === "success") {
+      if (type === "success") {
         osc.type = "sine";
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
@@ -62,7 +57,7 @@ export default function App() {
         osc.start(now);
         osc.stop(now + 0.3);
       } else {
-        // UI Click / Tap
+        // UI Click
         osc.type = "triangle";
         osc.frequency.setValueAtTime(2000, now);
         gain.gain.setValueAtTime(0.02, now);
@@ -73,10 +68,14 @@ export default function App() {
     } catch (e) {}
   };
 
+  // --- RESPONSIVE LISTENER ---
   useEffect(() => {
-    if (messages.length > 0) playSound("success");
-  }, [messages.length]);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
+  // --- TIME SYNC ---
   useEffect(() => {
     const t = setInterval(() => {
       setTime(
@@ -93,196 +92,279 @@ export default function App() {
   if (!booted) return <BootScreen onComplete={() => setBooted(true)} />;
   if (!user) return <LoginScreen onLogin={login} />;
 
-  // --- DYNAMIC LAYOUT LOGIC ---
-  // Mobile: Fixed full screen.
-  // Desktop: Responsive "Tablet/CyberDeck" container.
-  const containerClass = `
-    transition-all duration-500 ease-out
-    fixed inset-0 
-    md:relative md:w-[90vw] md:h-[85vh] md:max-w-[1200px] md:max-h-[900px]
-    md:rounded-[2rem] md:border-[1px] md:border-[#333] md:shadow-[0_0_50px_rgba(0,0,0,0.5)]
-    bg-black flex flex-col overflow-hidden ring-1 ring-white/10
-  `;
+  // --- DYNAMIC APPS LIST ---
+  // If we are on mobile, all apps are in the grid.
+  // If on desktop, "pinned" apps are in the dock, others in grid.
+  const ALL_APPS = [
+    {
+      id: "terminal",
+      label: "Terminal",
+      icon: Terminal,
+      color: "text-green-400",
+    },
+    {
+      id: "messages",
+      label: "Comms",
+      icon: MessageSquare,
+      color: "text-blue-400",
+      notify: messages.length > 0,
+    },
+    { id: "browser", label: "Net", icon: Globe, color: "text-cyan-400" },
+    { id: "files", label: "Files", icon: FolderOpen, color: "text-yellow-400" },
+    { id: "notes", label: "Notes", icon: StickyNote, color: "text-orange-400" },
+    { id: "settings", label: "Sys", icon: Settings, color: "text-gray-400" },
+    { id: "camera", label: "Cam", icon: Camera, color: "text-red-400" },
+  ];
+
+  const PINNED_APPS = [
+    "terminal",
+    "messages",
+    "browser",
+    "files",
+    "notes",
+    "settings",
+  ];
 
   return (
-    <div className="min-h-screen w-full bg-[#050505] flex items-center justify-center font-mono md:p-6 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#111] via-[#000] to-[#000]">
-      <div className={containerClass}>
-        {/* CRT SCANLINE OVERLAY */}
-        <div className="absolute inset-0 pointer-events-none z-[9999] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-10"></div>
-
-        {/* STATUS BAR */}
-        <div className="h-8 bg-black/40 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-4 text-[11px] font-bold text-gray-400 z-50 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-white tracking-widest">{time}</span>
-            <span className="hidden md:inline px-2 py-0.5 bg-white/10 rounded text-[9px] text-green-400">
-              CONNECTED
-            </span>
-          </div>
-          <div className="flex gap-3 items-center">
-            <Signal size={12} className="text-green-500" />
-            <Wifi size={12} className="text-green-500" />
-            <Battery size={14} className="text-green-500" />
-          </div>
+    <div className="fixed inset-0 bg-[#050505] font-mono text-gray-200 overflow-hidden flex flex-col">
+      {/* 1. STATUS BAR (Universal) */}
+      <div className="h-8 bg-black/60 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-4 text-[11px] font-bold z-50 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-white tracking-widest">{time}</span>
+          <span className="hidden md:inline px-2 py-0.5 bg-white/10 rounded text-[9px] text-green-400 tracking-wider">
+            {isMobile ? "MOBILE_DATA" : "ETHERNET_CONNECTED"}
+          </span>
         </div>
-
-        {/* DESKTOP WORKSPACE */}
-        <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center flex flex-col overflow-hidden group">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"></div>
-
-          {/* APP WINDOW (When Open) */}
-          <div
-            className={`absolute inset-0 z-40 transition-all duration-300 ${activeApp ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-          >
-            {activeApp && (
-              <div className="w-full h-full bg-[#0a0a0a] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-                {/* APP HEADER */}
-                <div className="h-10 bg-[#1a1a1a] border-b border-[#333] flex items-center justify-between px-4 shrink-0">
-                  <span className="text-xs font-bold text-gray-300 tracking-wider flex items-center gap-2 uppercase">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    {activeApp}
-                  </span>
-                  <button
-                    onClick={() => {
-                      playSound();
-                      setActiveApp(null);
-                    }}
-                    className="p-1.5 hover:bg-red-500/20 rounded-md text-gray-400 hover:text-red-400 transition-colors"
-                  >
-                    <Minimize2 size={14} />
-                  </button>
-                </div>
-
-                {/* APP CONTENT AREA - SCROLLABLE */}
-                <div className="flex-1 overflow-hidden relative">
-                  {activeApp === "terminal" && (
-                    <TerminalApp
-                      level={LEVELS[currentLevelIndex]}
-                      onSubmit={submitFlag}
-                      onSkip={skipLevel}
-                      credits={user.credits}
-                      playSound={playSound}
-                    />
-                  )}
-                  {activeApp === "messages" && (
-                    <MessagesApp messages={messages} />
-                  )}
-                  {activeApp === "notes" && <NotesApp />}
-                  {activeApp === "browser" && (
-                    <BrowserApp levelId={currentLevelIndex} />
-                  )}
-                  {activeApp === "settings" && <SettingsApp user={user} />}
-                  {(activeApp === "files" || activeApp === "camera") && (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-xs font-mono">
-                      [ ACCESS DENIED: MODULE ENCRYPTED ]
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* DOCK / APP GRID */}
-          {/* This sits at the bottom, mimicking macOS/iOS Dock */}
-          <div
-            className={`mt-auto mb-6 mx-auto z-30 transition-all duration-300 ${activeApp ? "translate-y-24 opacity-0" : "translate-y-0 opacity-100"}`}
-          >
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex gap-4 md:gap-6 shadow-2xl scale-90 md:scale-100 origin-bottom">
-              <DockIcon
-                icon={Terminal}
-                label="Terminal"
-                color="text-green-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("terminal");
-                }}
-                notification={currentLevelIndex < LEVELS.length}
-              />
-              <DockIcon
-                icon={MessageSquare}
-                label="Comms"
-                color="text-blue-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("messages");
-                }}
-                notification={messages.length > 0}
-              />
-              <DockIcon
-                icon={Globe}
-                label="Net"
-                color="text-cyan-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("browser");
-                }}
-              />
-              <div className="w-[1px] h-10 bg-white/10 my-auto"></div>{" "}
-              {/* Divider */}
-              <DockIcon
-                icon={FolderOpen}
-                label="Files"
-                color="text-yellow-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("files");
-                }}
-              />
-              <DockIcon
-                icon={StickyNote}
-                label="Notes"
-                color="text-orange-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("notes");
-                }}
-              />
-              <DockIcon
-                icon={Settings}
-                label="Sys"
-                color="text-gray-400"
-                onClick={() => {
-                  playSound();
-                  setActiveApp("settings");
-                }}
-              />
-            </div>
-          </div>
+        <div className="flex gap-3 items-center">
+          <Signal
+            size={12}
+            className={isMobile ? "text-green-500" : "text-gray-600"}
+          />
+          <Wifi size={12} className="text-green-500" />
+          <Battery size={14} className="text-green-500" />
         </div>
       </div>
+
+      {/* 2. MAIN WORKSPACE */}
+      <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center overflow-hidden group">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
+
+        {/* DESKTOP GRID (Universal, but hidden if App is Open on Mobile) */}
+        <div
+          className={`absolute inset-0 p-6 grid grid-cols-4 md:grid-cols-8 gap-4 content-start transition-opacity duration-300 ${activeApp && isMobile ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        >
+          {ALL_APPS.map((app) =>
+            // On Desktop, hide Pinned apps from Grid (they are in Dock). On Mobile, show all.
+            !isMobile || !PINNED_APPS.includes(app.id) ? (
+              <button
+                key={app.id}
+                onClick={() => {
+                  playSound();
+                  setActiveApp(app.id);
+                }}
+                className="flex flex-col items-center gap-2 group/icon"
+              >
+                <div className="w-14 h-14 bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-lg group-hover/icon:bg-white/10 transition-all">
+                  <app.icon size={24} className={app.color} />
+                  {app.notify && (
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-300 bg-black/50 px-2 rounded backdrop-blur-sm">
+                  {app.label}
+                </span>
+              </button>
+            ) : null,
+          )}
+        </div>
+
+        {/* ACTIVE APP WINDOW */}
+        {activeApp && (
+          <AppWindow
+            appId={activeApp}
+            isMobile={isMobile}
+            onClose={() => setActiveApp(null)}
+          >
+            {activeApp === "terminal" && (
+              <TerminalApp
+                level={LEVELS[currentLevelIndex]}
+                onSubmit={submitFlag}
+                onSkip={skipLevel}
+                credits={user.credits}
+                playSound={playSound}
+              />
+            )}
+            {activeApp === "messages" && <MessagesApp messages={messages} />}
+            {activeApp === "notes" && <NotesApp />}
+            {activeApp === "browser" && (
+              <BrowserApp levelId={currentLevelIndex} />
+            )}
+            {activeApp === "settings" && <SettingsApp user={user} />}
+            {/* Stub for new apps */}
+            {(activeApp === "files" || activeApp === "camera") && (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 text-xs font-mono p-8 text-center">
+                <Cpu size={48} className="mb-4 opacity-20" />
+                [ MODULE ENCRYPTED ]<br />
+                ACCESS DENIED BY ADMINISTRATOR
+              </div>
+            )}
+          </AppWindow>
+        )}
+      </div>
+
+      {/* 3. FOOTER AREA (Dual Mode) */}
+
+      {/* MODE A: MOBILE NAVBAR (Only visible on Mobile) */}
+      {isMobile && (
+        <div className="h-12 bg-black border-t border-[#222] flex justify-around items-center text-gray-400 z-50 shrink-0 pb-1">
+          <button
+            onClick={() => setActiveApp(null)}
+            className="p-4 active:text-white active:scale-95 transition-all"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <button
+            onClick={() => setActiveApp(null)}
+            className="p-4 active:text-white active:scale-95 transition-all"
+          >
+            <Home size={22} />
+          </button>
+          <button className="p-4 opacity-50 cursor-not-allowed">
+            <Square size={18} fill="currentColor" />
+          </button>
+        </div>
+      )}
+
+      {/* MODE B: DESKTOP DOCK (Only visible on Desktop) */}
+      {!isMobile && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100]">
+          <div className="glass-panel rounded-2xl px-4 py-3 flex gap-4 shadow-2xl items-end">
+            {PINNED_APPS.map((id) => {
+              const app = ALL_APPS.find((a) => a.id === id);
+              return (
+                <DockIcon
+                  key={id}
+                  icon={app.icon}
+                  label={app.label}
+                  color={app.color}
+                  isActive={activeApp === id}
+                  onClick={() => {
+                    playSound();
+                    setActiveApp(id);
+                  }}
+                  notify={app.notify}
+                />
+              );
+            })}
+            {/* Separator for unpinned active apps could go here */}
+            <div className="w-[1px] h-8 bg-white/10 mx-2 self-center"></div>
+            <button className="group relative p-2 rounded-xl hover:bg-white/10 transition-all">
+              <div className="grid grid-cols-2 gap-0.5 w-6 h-6 opacity-50 group-hover:opacity-100">
+                <div className="bg-white rounded-[1px]"></div>
+                <div className="bg-white rounded-[1px]"></div>
+                <div className="bg-white rounded-[1px]"></div>
+                <div className="bg-white rounded-[1px]"></div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // --- SUB-COMPONENTS ---
 
-const DockIcon = ({ icon: Icon, label, color, onClick, notification }) => (
-  <button
-    onClick={onClick}
-    className="group relative flex flex-col items-center gap-1 min-w-[50px]"
-  >
-    <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center border border-white/5 shadow-lg group-hover:-translate-y-2 group-hover:scale-110 group-hover:border-white/20 transition-all duration-200 ease-out">
-      <Icon
-        size={24}
-        className={`${color} opacity-80 group-hover:opacity-100`}
-      />
+// 1. AppWindow: The wrapper that handles Scrolling & Minimizing
+const AppWindow = ({ appId, isMobile, onClose, children }) => {
+  // Mobile: Fullscreen. Desktop: Centered Floating Window.
+  const windowClass = isMobile
+    ? "absolute inset-0 z-40 bg-[#050505] flex flex-col animate-in slide-in-from-bottom duration-300"
+    : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[80%] max-w-5xl bg-[#0a0a0a] border border-[#333] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-40 ring-1 ring-white/10";
+
+  return (
+    <div className={windowClass}>
+      {/* WINDOW HEADER (Visible on Desktop OR Mobile if preferred) */}
+      <div className="h-9 bg-[#111] border-b border-[#222] flex items-center justify-between px-3 shrink-0 select-none">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            {appId}.EXE
+          </span>
+        </div>
+
+        {/* Window Controls */}
+        <div className="flex items-center gap-2">
+          {!isMobile && (
+            <>
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white"
+              >
+                <Minus size={12} />
+              </button>
+              <button className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white">
+                <Maximize2 size={12} />
+              </button>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-red-900/50 rounded text-gray-500 hover:text-red-400 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* SCROLLABLE CONTENT AREA - This fixes the scroll bug */}
+      <div className="flex-1 overflow-y-auto relative custom-scrollbar bg-[#050505]">
+        {children}
+      </div>
     </div>
-    {notification && (
-      <div className="absolute top-0 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1a1a1a] animate-pulse"></div>
-    )}
-    <span className="text-[9px] text-gray-400 opacity-0 group-hover:opacity-100 absolute -top-8 bg-black/80 px-2 py-1 rounded backdrop-blur transition-opacity border border-white/10 whitespace-nowrap">
-      {label}
-    </span>
-    {/* Reflection Dot */}
-    <div className="w-1 h-1 bg-white/20 rounded-full mt-1 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-  </button>
-);
+  );
+};
+
+// 2. DockIcon: Handles the hover effects cleanly
+const DockIcon = ({ icon: Icon, label, color, onClick, isActive, notify }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex flex-col items-center justify-end"
+    >
+      {/* Tooltip (Only on direct hover) */}
+      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/80 text-white text-[9px] px-2 py-1 rounded border border-white/10 pointer-events-none mb-2 whitespace-nowrap">
+        {label}
+      </div>
+
+      {/* Icon Container */}
+      <div
+        className={`
+        w-12 h-12 rounded-xl flex items-center justify-center 
+        border transition-all duration-200 ease-out
+        ${isActive ? "bg-white/10 border-white/30 mb-2" : "bg-[#1a1a1a]/80 border-white/5 hover:mb-2 hover:scale-110 hover:bg-[#2a2a2a]"}
+      `}
+      >
+        <Icon size={24} className={`${color} opacity-90`} />
+        {notify && (
+          <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1a1a1a] animate-pulse"></div>
+        )}
+      </div>
+
+      {/* Active Dot */}
+      <div
+        className={`w-1 h-1 bg-white rounded-full mt-1 transition-opacity ${isActive ? "opacity-100" : "opacity-0"}`}
+      ></div>
+    </button>
+  );
+};
 
 const BootScreen = ({ onComplete }) => {
   useEffect(() => {
-    setTimeout(onComplete, 2500);
+    setTimeout(onComplete, 2000);
   }, [onComplete]);
   return (
-    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center text-green-500 z-[10000]">
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center text-green-500 z-[9999]">
       <Cpu size={64} className="mb-6 animate-pulse" />
       <div className="text-3xl font-black tracking-[0.5em] mb-2 glitch-text">
         Ph0enixOS
@@ -290,7 +372,6 @@ const BootScreen = ({ onComplete }) => {
       <div className="text-xs text-green-800 font-mono">
         KERNEL_V4.0.2 :: SECURE_BOOT
       </div>
-
       <div className="w-64 h-1 bg-gray-900 rounded-full mt-8 overflow-hidden">
         <div className="h-full bg-green-500 animate-[bootUp_2s_ease-out_forwards] w-full origin-left"></div>
       </div>
@@ -304,25 +385,18 @@ const LoginScreen = ({ onLogin }) => {
     <div className="fixed inset-0 bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#0a0a0a] border border-[#222] p-8 rounded-2xl shadow-2xl text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-600 to-transparent"></div>
-
         <div className="w-20 h-20 bg-[#111] rounded-full mx-auto mb-6 flex items-center justify-center border border-[#333] shadow-[0_0_30px_rgba(34,197,94,0.1)]">
           <User size={32} className="text-green-600" />
         </div>
-
         <h2 className="text-2xl font-bold text-white mb-1">IDENTIFY</h2>
-        <p className="text-xs text-gray-500 mb-8 font-mono">
-          ENTER AGENT ALIAS TO CONNECT
-        </p>
-
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && name && onLogin(name)}
-          className="w-full bg-[#050505] border border-[#333] text-green-500 p-4 rounded-lg text-center font-mono focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600/50 transition-all placeholder:text-gray-800"
+          className="w-full bg-[#050505] border border-[#333] text-green-500 p-4 rounded-lg text-center font-mono focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600/50 transition-all placeholder:text-gray-800 mt-6"
           placeholder="CODENAME"
           autoFocus
         />
-
         <button
           onClick={() => name && onLogin(name)}
           className="w-full mt-4 bg-green-700 hover:bg-green-600 text-black font-bold py-3 rounded-lg transition-all active:scale-95"
