@@ -11,12 +11,12 @@ export const LEVELS = [
   {
     id: 0,
     title: "INITIATION",
-    prompt: "The system ignores 'White Noise'. Highlight the anomaly.",
+    prompt: "The system ignores '#FFFFFF Noise',check the anomaly.",
     type: "visual",
     answerHash:
-      "301655f566436402802058300266014457630737466540602410360340530504",
+      "072dbc00b45b903e843352f635b22a9fcdf62ebd1e1cf81ceb4a06d1b3a9a9b1",
     hintDelay: 60,
-    hintText: "Text is white on white background. Select/Highlight it.",
+    hintText: "INFO: #FFFFFF has the key",
     reward: 50,
   },
   {
@@ -25,9 +25,9 @@ export const LEVELS = [
     prompt: "A developer left a debug key in the DOM comments.",
     type: "html_comment",
     answerHash:
-      "d078170e55726df9425482e9d2179854df11079d375323984501a57f8623253b",
+      "e35fe6a4a35f7dda8aa3e3ed640afae13f39c9985a8bc3322fbddc3d6726081f",
     hintDelay: 120,
-    hintText: "Right Click -> Inspect Element. Search for ",
+    hintText: "INFO: /* LEAK */",
     reward: 100,
   },
   {
@@ -36,10 +36,9 @@ export const LEVELS = [
     prompt: "Server rejecting connections. Check Network Response.",
     type: "browser",
     answerHash:
-      "9781898555469905d4653f58a741364210a4e760086c52a093740e532b2e0436",
+      "600bb515ddce46daf023828a725c3dd5db29af7fddc1868884ccd83612e5130a",
     hintDelay: 180,
-    hintText:
-      "Open Browser App. F12 -> Network Tab. Click Connect. Check the red request.",
+    hintText: "WebAPI: #FF0000 connect request.",
     reward: 150,
   },
   {
@@ -48,9 +47,9 @@ export const LEVELS = [
     prompt: "Client-side privilege check detected.",
     type: "console",
     answerHash:
-      "0a830954707324c45e691238806371c668b55577609217621c107293a9712a32",
+      "ba3fbd5a789ac54e63446df86c0066cc516c0635a636ecd61301ee868e4b431b",
     hintDelay: 240,
-    hintText: "Console (F12). Type: window.isAdmin = () => true",
+    hintText: "c.log: window.isAdmin = () => false",
     reward: 200,
   },
   {
@@ -60,9 +59,9 @@ export const LEVELS = [
     type: "encoding",
     content: "U0VDUkVUX0FHRU5UX01BTg==",
     answerHash:
-      "2204620570997193655383569426372134547285600649722883307730953187",
+      "8a44829db8bbd244e69119687d70c07f2465f2bf38edb259fc6c0bf92eacca2a",
     hintDelay: 300,
-    hintText: "Ends with ==. Use Base64 decoder.",
+    hintText: "Ends with ==. Use Base64",
     reward: 300,
   },
 ];
